@@ -7,21 +7,21 @@ module ActiveMerchant #:nodoc:
     class PaypalExpressGateway < Gateway
       include PaypalCommonAPI
       include PaypalExpressCommon
-      
-      self.test_redirect_url = 'https://www.sandbox.paypal.com/cgi-bin/webscr'
+
+      self.test_redirect_url = 'https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_express-checkout&token='
       self.supported_countries = ['US']
       self.homepage_url = 'https://www.paypal.com/cgi-bin/webscr?cmd=xpt/merchant/ExpressCheckoutIntro-outside'
       self.display_name = 'PayPal Express Checkout'
-      
+
       def setup_authorization(money, options = {})
         requires!(options, :return_url, :cancel_return_url)
-        
+
         commit 'SetExpressCheckout', build_setup_request('Authorization', money, options)
       end
-      
+
       def setup_purchase(money, options = {})
         requires!(options, :return_url, :cancel_return_url)
-        
+
         commit 'SetExpressCheckout', build_setup_request('Sale', money, options)
       end
 
@@ -31,13 +31,13 @@ module ActiveMerchant #:nodoc:
 
       def authorize(money, options = {})
         requires!(options, :token, :payer_id)
-      
+
         commit 'DoExpressCheckoutPayment', build_sale_or_authorization_request('Authorization', money, options)
       end
 
       def purchase(money, options = {})
         requires!(options, :token, :payer_id)
-        
+
         commit 'DoExpressCheckoutPayment', build_sale_or_authorization_request('Sale', money, options)
       end
 
@@ -53,10 +53,10 @@ module ActiveMerchant #:nodoc:
 
         xml.target!
       end
-      
+
       def build_sale_or_authorization_request(action, money, options)
         currency_code = options[:currency] || currency(money)
-        
+
         xml = Builder::XmlMarkup.new :indent => 2
         xml.tag! 'DoExpressCheckoutPaymentReq', 'xmlns' => PAYPAL_NAMESPACE do
           xml.tag! 'DoExpressCheckoutPaymentRequest', 'xmlns:n2' => EBAY_NAMESPACE do
@@ -75,7 +75,7 @@ module ActiveMerchant #:nodoc:
                   xml.tag! 'n2:HandlingTotal', localized_amount(options[:handling], currency_code),'currencyID' => currency_code
                   xml.tag! 'n2:TaxTotal', localized_amount(options[:tax], currency_code), 'currencyID' => currency_code
                 end
-                
+
                 xml.tag! 'n2:NotifyURL', options[:notify_url]
                 xml.tag! 'n2:ButtonSource', application_id.to_s.slice(0,32) unless application_id.blank?
                 xml.tag! 'n2:InvoiceID', options[:order_id]
@@ -139,6 +139,8 @@ module ActiveMerchant #:nodoc:
                 end
               end
         
+              xml.tag! 'n2:InvoiceID', options[:order_id]
+
               # Customization of the payment page
               xml.tag! 'n2:PageStyle', options[:page_style] unless options[:page_style].blank?
               xml.tag! 'n2:cpp-header-image', options[:header_image] unless options[:header_image].blank?
@@ -158,7 +160,7 @@ module ActiveMerchant #:nodoc:
 
         xml.target!
       end
-      
+
       def build_response(success, message, response, options = {})
         PaypalExpressResponse.new(success, message, response, options)
       end
